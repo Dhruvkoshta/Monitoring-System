@@ -22,7 +22,7 @@
     "noEmit": true,
     "strictNullChecks": true
   },
-  "include": ["src"],
+  "include": ["src", "src/types/serial.d.ts"],
   "exclude": ["node_modules"],
   "references": [
     {
