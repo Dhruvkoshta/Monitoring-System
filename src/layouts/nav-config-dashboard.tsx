@@ -22,4 +22,9 @@ export const navData = [
     path: '/user',
     icon: icon('ic-user'),
   },
+  {
+    title: 'Logs',
+    path: '/logs',
+    icon: icon('ic-analytics'),
+  },
 ];

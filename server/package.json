@@ -1,13 +1,21 @@
 {
   "name": "server",
   "private": true,
+  "scripts": {
+    "start": "node server-new.js",
+    "seed": "node db/seed.js",
+    "seed:large": "node db/seed-large.js"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.31.8"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "better-sqlite3": "^12.5.0",
+    "drizzle-orm": "^0.45.0",
     "express": "^5.1.0",
     "socket.io": "^4.8.1"
   }

@@ -1,7 +1,7 @@
 import type { RoomSensorData } from 'src/_mock/_rooms';
 
 import { useState, useCallback } from 'react';
-import { Server, Activity, Droplets, Terminal, AlertTriangle, Usb } from 'lucide-react';
+import { Activity, AlertTriangle, Droplets, Server, Terminal, Usb } from 'lucide-react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -27,11 +27,56 @@ export function OverviewAnalyticsView() {
 
   const handleSerialData = useCallback((data: any) => {
     console.log('Serial Data:', data);
-    setRooms((prevRooms) =>
-      prevRooms.map((room) =>
-        room.id === data.id ? { ...room, ...data, isActive: true, timestamp: Date.now() } : room
-      )
-    );
+
+    setRooms((prevRooms) => {
+      const updatedRooms = prevRooms.map((room) => {
+        if (room.id === data.id) {
+          // Determine status based on alerts
+          let status: 'normal' | 'warning' | 'critical' = 'normal';
+          if (data.fire || data.flood || data.quake) {
+            status = 'critical';
+          } else if (data.floodLevel > 30) {
+            status = 'warning';
+          }
+
+          const updatedRoom = {
+            ...room,
+            fire: data.fire,
+            flood: data.flood,
+            quake: data.quake,
+            floodLevel: data.floodLevel,
+            quakeIntensity: data.quakeIntensity,
+            rssi: data.rssi,
+            lastUpdate: Date.now(),
+            status,
+            isActive: true,
+          };
+
+          // Send data to backend for logging
+          fetch('http://localhost:5000/api/readings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: room.id,
+              fire: data.fire,
+              flood: data.flood,
+              quake: data.quake,
+              floodLevel: data.floodLevel,
+              quakeIntensity: data.quakeIntensity,
+              rssi: data.rssi,
+              temperature: room.temperature,
+              humidity: room.humidity,
+              timestamp: Date.now(),
+            }),
+          }).catch((err) => console.error('Failed to log data:', err));
+
+          return updatedRoom;
+        }
+        return room;
+      });
+
+      return updatedRooms;
+    });
   }, []);
 
   const connectToSerial = async () => {
@@ -53,7 +98,6 @@ export function OverviewAnalyticsView() {
       }
 
       let buffer = '';
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { value, done } = await reader.read();
         if (done) {
