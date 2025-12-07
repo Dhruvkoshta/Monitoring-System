@@ -111,6 +111,30 @@ let commandQueue = {};
 })();
 
 // --- HELPER FUNCTIONS ---
+
+// Send Push Notification via ntfy.sh
+async function sendPushNotification(title, body, priority = 'high', tags = 'warning') {
+  try {
+    const response = await fetch('https://ntfy.sh/alert', {
+      method: 'POST',
+      body: body,
+      headers: {
+        Title: title,
+        Priority: priority,
+        Tags: tags,
+      },
+    });
+
+    if (response.ok) {
+      console.log(`📲 Push notification sent: ${title}`);
+    } else {
+      console.error('❌ Failed to send push notification:', response.statusText);
+    }
+  } catch (error) {
+    console.error('❌ Error sending push notification:', error);
+  }
+}
+
 function determineEventType(data) {
   if (data.fire || data.quake || (data.flood && data.floodLevel > 50)) {
     return 'critical';
@@ -179,32 +203,61 @@ async function saveSensorLog(room, data) {
         timestamp: new Date(),
         createdAt: new Date(),
       });
+
+      // Send push notification
+      await sendPushNotification(
+        '🔥 FIRE ALERT - CRITICAL',
+        `Fire detected in ${room.name} (${room.location}). Evacuate immediately!`,
+        'urgent',
+        'fire,warning,rotating_light'
+      );
     }
 
     if (data.flood && data.floodLevel > 40) {
+      const severity = data.floodLevel > 60 ? 'critical' : 'warning';
       await dbOperations.insertAlertEvent({
         roomId: room.id,
         roomName: room.name,
         alertType: 'flood',
-        severity: data.floodLevel > 60 ? 'critical' : 'warning',
+        severity: severity,
         value: data.floodLevel,
         resolved: false,
         timestamp: new Date(),
         createdAt: new Date(),
       });
+
+      // Send push notification
+      const priority = severity === 'critical' ? 'urgent' : 'high';
+      const emoji = severity === 'critical' ? '🌊' : '💧';
+      await sendPushNotification(
+        `${emoji} FLOOD ALERT - ${severity.toUpperCase()}`,
+        `Flood detected in ${room.name} (${room.location}). Water level: ${data.floodLevel}%`,
+        priority,
+        'droplet,warning'
+      );
     }
 
     if (data.quake && data.quakeIntensity > 4.0) {
+      const severity = data.quakeIntensity > 6.0 ? 'critical' : 'warning';
       await dbOperations.insertAlertEvent({
         roomId: room.id,
         roomName: room.name,
         alertType: 'quake',
-        severity: data.quakeIntensity > 6.0 ? 'critical' : 'warning',
+        severity: severity,
         value: data.quakeIntensity,
         resolved: false,
         timestamp: new Date(),
         createdAt: new Date(),
       });
+
+      // Send push notification
+      const priority = severity === 'critical' ? 'urgent' : 'high';
+      await sendPushNotification(
+        `🌊 EARTHQUAKE ALERT - ${severity.toUpperCase()}`,
+        `Earthquake detected in ${room.name} (${room.location}). Magnitude: ${data.quakeIntensity}`,
+        priority,
+        'warning,zap'
+      );
     }
 
     return log;
